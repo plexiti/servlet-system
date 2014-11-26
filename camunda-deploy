@@ -1,0 +1,87 @@
+#!/bin/bash
+function cam_tomcat {
+    mkdir -p ./target
+    rm -rf ./target/camunda-bpm
+    unzip -q ~/.servlet/camunda-bpm-tomcat-7.2.0-alpha6.zip -d ./target/camunda-bpm
+    TOMCAT=`ls ./target/camunda-bpm/server/`
+    cd ./target
+    WAR=`ls -1 *.war | head -n 1 | sed -e 's/....$//'`
+    cp ./*.war ./camunda-bpm/server/$TOMCAT/webapps
+    ./camunda-bpm/server/$TOMCAT/bin/startup.sh
+    sleep 3
+    open http://localhost:8080/${WAR:-camunda-welcome}
+    tail -f ./camunda-bpm/server/$TOMCAT/logs/catalina.out
+    ./camunda-bpm/server/$TOMCAT/bin/shutdown.sh
+    cd ..
+    rm -rf ./target/camunda-bpm
+}
+
+function cam_wildfly {
+	if [[ $1 != -* ]]; then
+		echo "Usage: -cdlbsk (clean, deploy, log, browse, stop, kill)"
+	elif [ ! -d "./target" ]; then
+		echo "No './target' folder found."
+    else
+	    cd ./target
+		WAR=`ls -1 *.war 2>/dev/null | head -n 1 | sed -e 's/....$//'`
+		if [ -z "$WAR" ]; then
+			echo "No *.war file found in './target' folder."
+		else
+			DIR="./camunda-bpm"
+			PID=`lsof -P -iTCP -sTCP:LISTEN | grep localhost:8080 | awk '{print $2}'`
+			echo -n "${WAR}: |"
+	    	if [[ $1 == *c* ]]; then
+				if [ ! -z "$PID" ]; then
+		 	   		echo -n "stop|"; sleep 2
+					kill -s TERM $PID
+					PID=""
+				fi
+				echo -n "clean|"
+	    		rm -rf $DIR
+	    		rm -rf ./camunda-h2-dbs
+			fi
+	    	if [ ! -d "$DIR" ]; then
+				echo -n "unzip|"
+		    	unzip -q ~/.servlet/camunda-bpm-wildfly-7.2.0-alpha6.zip -d ./camunda-bpm
+			fi
+	    	WILDFLY=`ls ./camunda-bpm/server/`
+			if [ -z "$PID" ]; then
+	    		echo -n "start|"
+	    		$(./camunda-bpm/server/${WILDFLY}/bin/standalone.sh &> wildfly.out &)
+				sleep 1; PID=`pgrep java | tail -1`
+			else 
+				echo -n "running|"
+			fi
+	    	if [[ $1 == *d* ]]; then 	
+		    	echo -n "deploy|"
+		    	#cp ./${WAR}.war ./camunda-bpm/server/$WILDFLY/standalone/deployments
+			fi
+	    	if [[ $1 == *b* ]]; then 	
+				echo -n "browse|"
+		 	   	CAM="http://localhost:8080/camunda/app/tasklist/default/"; CAM_EXISTS=""
+				while [ -z "${CAM_EXISTS}" ]; do
+					CAM_EXISTS=`curl -sI ${CAM} | grep "200 OK"`
+					sleep 3
+				done
+	   			open http://localhost:8080/camunda-welcome
+			fi
+	    	if [[ $1 == *l* ]]; then 	
+				echo
+				tail -f wildfly.out
+			elif [[ $1 == *s* && $1 != "-s" ]]; then
+				read -n 1; echo -en '\b'
+			fi
+			if [[ $1 == *k* ]]; then
+	 	   		echo -n "kill|"
+				kill -s SIGKILL $PID
+	    	elif [[ $1 == *s* ]]; then 	
+		    	if [[ $1 != *l* ]]; then 	
+		 	   		echo -n "stop|"
+				fi
+				kill -s TERM $PID
+			fi
+			echo
+		fi
+		cd ..
+	fi
+}

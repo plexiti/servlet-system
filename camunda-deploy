@@ -54,7 +54,7 @@ function cam_wildfly {
 			fi
 	    	if [[ $1 == *d* ]]; then 	
 		    	echo -n "deploy|"
-		    	#cp ./${WAR}.war ./camunda-bpm/server/$WILDFLY/standalone/deployments
+		    	cp -f ./${WAR}.war ./camunda-bpm/server/$WILDFLY/standalone/deployments
 			fi
 	    	if [[ $1 == *b* ]]; then 	
 				echo -n "browse|"

@@ -42,7 +42,7 @@ function cam_wildfly {
 			fi
 	    	if [ ! -d "$DIR" ]; then
 				echo -n "unzip|"
-		    	unzip -q ~/.servlet/camunda-bpm-wildfly-7.2.0-alpha6.zip -d ./camunda-bpm
+		    	unzip -q ~/.servlet/camunda-bpm-wildfly-7.2.0-clean.zip -d ./camunda-bpm
 			fi
 	    	WILDFLY=`ls ./camunda-bpm/server/`
 			if [ -z "$PID" ]; then
